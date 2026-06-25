@@ -2,43 +2,124 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>PI ARCADE NEXUS - NES</title>
-    <!-- Moteur JSNES intégré -->
-    <script src="https://unpkg.com/jsnes/dist/jsnes.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PI ARCADE NEXUS</title>
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
     <style>
-        body { background: #0d0d1f; color: white; text-align: center; font-family: sans-serif; }
-        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px; }
-        button { background: #5b21b6; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; }
-        #emulator-screen { border: 2px solid #7c3aed; margin-top: 10px; }
+        * { box-sizing: border-box; }
+        body { 
+            background-color: #0d0d1f; 
+            color: white; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 10px; 
+            text-align: center;
+        }
+        header { 
+            padding: 15px; 
+            background: #1a1a2e; 
+            border-radius: 10px; 
+            border: 1px solid #7c3aed; 
+            margin-bottom: 15px; 
+        }
+        h1 { margin: 0; font-size: 24px; color: #fff; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .pi-login { 
+            background: #5b21b6; 
+            padding: 12px 20px; 
+            color: white;
+            border: none;
+            border-radius: 8px; 
+            margin-top: 10px; 
+            cursor: pointer; 
+            font-weight: bold;
+        }
+
+        .game-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px; 
+            margin-bottom: 15px; 
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .game-btn { 
+            background: #3b0764; 
+            padding: 20px 15px; 
+            border-radius: 8px; 
+            color: white; 
+            border: 1px solid #7c3aed; 
+            cursor: pointer; 
+            transition: all 0.3s ease;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .game-btn:active { background: #5b21b6; }
+
+        #game-frame {
+            width: 100%;
+            height: 450px;
+            border: 2px solid #7c3aed;
+            border-radius: 10px;
+            background: #000;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
-    <h1>PI ARCADE NEXUS</h1>
+
+    <header>
+        <h1>🎮 PI ARCADE NEXUS</h1>
+        <button class="pi-login" onclick="authPiUser()">Se connecter avec Pi</button>
+        <p id="user-status" style="margin: 10px 0 0 0; color: #a78bfa;">Connecte ton compte pour jouer (0.1 Pi par session).</p>
+    </header>
+
     <div class="game-grid">
-        <button onclick="lancerJeu('https://corsproxy.io/?https://raw.githubusercontent.com/nesbox/ROMs/master/NES/Super%20Mario%20Bros.nes')">🍄 Mario</button>
-        <button onclick="lancerJeu('https://corsproxy.io/?https://raw.githubusercontent.com/nesbox/ROMs/master/NES/The%20Legend%20of%20Zelda.nes')">🛡️ Zelda</button>
+        <button class="game-btn" onclick="lancerJeuPayant('https://gabrielecirulli.github.io/2048/')">🧩 2048</button>
+        <button class="game-btn" onclick="lancerJeuPayant('https://binaryjs.com/project/pacman/')">🟡 Pac-Man</button>
+        <button class="game-btn" onclick="lancerJeuPayant('https://ellisonleao.github.io/clumsy-bird/')">🐦 Flappy</button>
+        <button class="game-btn" onclick="lancerJeuPayant('https://claude-hub.github.io/tetris-js/')">🎮 Tetris</button>
     </div>
-    <canvas id="emulator-screen" width="256" height="240"></canvas>
+
+    <iframe id="game-frame" src="about:blank"></iframe>
 
     <script>
-        const nes = new jsnes.NES({
-            onFrame: (buffer) => {
-                const canvas = document.getElementById('emulator-screen');
-                const ctx = canvas.getContext('2d');
-                const img = ctx.createImageData(256, 240);
-                // Rendu des pixels ici
-                ctx.putImageData(img, 0, 0);
-            }
-        });
+        // Initialisation du SDK Pi (bac à sable activé pour les tests)
+        try {
+            Pi.init({ version: "2.0", sandbox: true });
+        } catch(e) {
+            console.error("SDK Pi non initialisé", e);
+        }
 
-        function lancerJeu(url) {
-            fetch(url)
-                .then(res => res.arrayBuffer())
-                .then(data => {
-                    nes.loadROM(new Uint8Array(data));
-                    nes.start();
-                })
-                .catch(err => alert("Erreur de chargement : " + err));
+        async function authPiUser() {
+            try {
+                // Demande explicite de la permission 'payments' en plus de 'username'
+                const user = await Pi.authenticate(['username', 'payments'], function(payment) {
+                    console.log("Paiement incomplet trouvé : ", payment);
+                });
+                document.getElementById('user-status').innerText = `Bienvenue, ${user.username} ! Autorisations validées.`;
+            } catch (err) { 
+                alert("Erreur de connexion : assure-toi d'être dans le Pi Browser. Détails : " + err); 
+            }
+        }
+
+        function lancerJeuPayant(urlDuJeu) {
+            // Demande de paiement de 0.1 Pi avant d'afficher le jeu
+            Pi.createPayment({
+                amount: 0.1,
+                memo: "Session Arcade PI ARCADE NEXUS",
+                metadata: { game: "session" }
+            }, {
+                onReadyForServerApproval: (payment) => { /* Transaction initiée */ },
+                onReadyForServerCompletion: (paymentId) => { 
+                    // Le paiement est validé, on charge le jeu dans l'iframe
+                    document.getElementById('game-frame').src = urlDuJeu;
+                },
+                onCancel: () => { alert("Paiement annulé, la session de jeu ne peut pas démarrer."); },
+                onError: (error) => { alert("Erreur lors du paiement : " + error); }
+            });
         }
     </script>
 </body>
