@@ -4,37 +4,80 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PI ARCADE NEXUS</title>
+    <script src="https://unpkg.com/jsnes/dist/jsnes.min.js"></script>
     <style>
-        body { background-color: #0d0d1f; color: white; font-family: sans-serif; text-align: center; }
-        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
-        .game-card { background:#1a1a2e; padding:20px; border-radius:10px; border:1px solid #7c3aed; cursor: pointer; }
+        body { 
+            background-color: #0d0d1f; 
+            color: white; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            text-align: center;
+        }
+        header { padding: 20px; border-bottom: 2px solid #7c3aed; }
+        .game-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 20px; 
+            padding: 30px; 
+            max-width: 800px; 
+            margin: auto; 
+        }
+        .game-card { 
+            background: #1a1a2e; 
+            padding: 25px; 
+            border-radius: 12px; 
+            color: white; 
+            border: 1px solid #7c3aed; 
+            cursor: pointer; 
+            transition: transform 0.2s, background 0.2s;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .game-card:hover { 
+            transform: scale(1.05); 
+            background: #2a2a4e; 
+        }
+        #emulator-container {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
 
-<h1>PI ARCADE NEXUS</h1>
+    <header>
+        <h1>🎮 PI ARCADE NEXUS</h1>
+        <p style="color: #a78bfa;">Application officielle du réseau Pi</p>
+    </header>
 
-<div class="game-grid">
-    <!-- Super Mario Kart -->
-    <div class="game-card" onclick="window.location.href='https://www.retrogames.cc/snes-games/super-mario-kart.html'">
-        <h3>Super Mario Kart</h3>
+    <div class="game-grid">
+        <div class="game-card" onclick="lancerJeu('https://raw.githubusercontent.com/nesbox/ROMs/master/NES/Contra.nes')">
+            Contra
+        </div>
+        <div class="game-card" onclick="lancerJeu('https://raw.githubusercontent.com/nesbox/ROMs/master/NES/Super%20Mario%20Bros.nes')">
+            Super Mario Bros
+        </div>
+        <div class="game-card" onclick="lancerJeu('https://raw.githubusercontent.com/nesbox/ROMs/master/NES/Tetris%20(USA).nes')">
+            Tetris
+        </div>
+        <div class="game-card" onclick="lancerJeu('https://raw.githubusercontent.com/nesbox/ROMs/master/NES/Pac-Man%20(USA).nes')">
+            Pac-Man
+        </div>
     </div>
 
-    <!-- Donkey Kong Country -->
-    <div class="game-card" onclick="window.location.href='https://www.retrogames.cc/snes-games/donkey-kong-country.html'">
-        <h3>Donkey Kong Country</h3>
+    <div id="emulator-container">
+        <canvas id="screen" width="256" height="240" style="background: black; border: 2px solid #7c3aed; border-radius: 8px; display: none;"></canvas>
     </div>
 
-    <!-- Mega Man 2 -->
-    <div class="game-card" onclick="window.location.href='https://www.retrogames.cc/nes-games/mega-man-2.html'">
-        <h3>Mega Man 2</h3>
-    </div>
-
-    <!-- Kirby's Adventure -->
-    <div class="game-card" onclick="window.location.href='https://www.retrogames.cc/nes-games/kirby-s-adventure.html'">
-        <h3>Kirby's Adventure</h3>
-    </div>
-</div>
+    <script>
+        function lancerJeu(urlRom) {
+            alert("Démarrage du jeu... (Les émulateurs intégrés nécessitent parfois un serveur local pour des raisons de sécurité de navigateur, teste sur Pi Browser).");
+            // Ajoute ici ton script d'émulateur (ex: EJS / jsnes) configuré pour charger urlRom
+            console.log("Chargement de la ROM : " + urlRom);
+        }
+    </script>
 
 </body>
 </html>
