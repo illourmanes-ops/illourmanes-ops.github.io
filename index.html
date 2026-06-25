@@ -5,14 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PI ARCADE NEXUS</title>
     <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <script src="https://unpkg.com/jsnes/dist/jsnes.min.js"></script>
     <style>
+        * { box-sizing: border-box; }
         body { 
             background-color: #0d0d1f; 
             color: white; 
-            text-align: center; 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             margin: 0; 
             padding: 10px; 
+            text-align: center;
         }
         header { 
             padding: 15px; 
@@ -21,7 +23,8 @@
             border: 1px solid #7c3aed; 
             margin-bottom: 15px; 
         }
-        h1 { margin: 0; font-size: 24px; color: #fff; }
+        h1 { margin: 0; font-size: 24px; color: #fff; text-transform: uppercase; letter-spacing: 2px; }
+        
         .pi-login { 
             background: #5b21b6; 
             padding: 12px 20px; 
@@ -32,31 +35,47 @@
             cursor: pointer; 
             font-weight: bold;
         }
+
+        #emulator-box {
+            background: #000;
+            display: inline-block;
+            padding: 10px;
+            border: 3px solid #7c3aed;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(124, 58, 237, 0.5);
+            margin-bottom: 15px;
+        }
+        canvas { 
+            display: block; 
+            background: #000; 
+            width: 100%;
+            max-width: 256px;
+            height: auto;
+            margin: 0 auto;
+        }
+        
         .game-grid { 
             display: grid; 
             grid-template-columns: 1fr 1fr; 
             gap: 10px; 
             margin-bottom: 15px; 
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
         }
         .game-btn { 
             background: #3b0764; 
             padding: 15px; 
             border-radius: 8px; 
+            color: white; 
+            border: 1px solid #7c3aed; 
             cursor: pointer; 
-            border: 1px solid #7c3aed;
-            font-weight: bold;
+            transition: all 0.3s ease;
             font-size: 16px;
-            transition: 0.2s;
+            font-weight: bold;
+            text-transform: uppercase;
         }
         .game-btn:active { background: #5b21b6; }
-        
-        #game-frame { 
-            width: 100%; 
-            height: 450px; 
-            border: 2px solid #7c3aed; 
-            border-radius: 10px; 
-            background: #000;
-        }
     </style>
 </head>
 <body>
@@ -64,10 +83,114 @@
     <header>
         <h1>🎮 PI ARCADE NEXUS</h1>
         <button class="pi-login" onclick="authPiUser()">Se connecter avec Pi</button>
-        <p id="user-status" style="margin: 10px 0 0 0; color: #a78bfa;">Connecte ton compte pour lancer une partie.</p>
+        <p id="user-status" style="margin: 10px 0 0 0; color: #a78bfa;">Connecte ton compte pour jouer.</p>
     </header>
 
+    <div id="emulator-box" style="display: none;">
+        <canvas id="screen" width="256" height="240"></canvas>
+        <button onclick="arreterJeu()" style="margin-top: 10px; padding: 8px 15px; background: #ef4444; border: none; color: white; border-radius: 5px; cursor: pointer; font-weight: bold;">⏹ Arrêter le jeu</button>
+    </div>
+
     <div class="game-grid">
-        <div class="game-btn" onclick="lancerJeu('https://gabrielecirulli.github.io/2048/')">2048</div>
-        <div class="game-btn" onclick="
+        <button class="game-btn" onclick="chargerJeuAvecPaiement('https://raw.githubusercontent.com/nesbox/ROMs/master/NES/Super%20Mario%20Bros.nes')">🍄 Mario Bros</button>
+        <button class="game-btn" onclick="chargerJeuAvecPaiement('https://raw.githubusercontent.com/nesbox/ROMs/master/NES/Contra.nes')">🔫 Contra</button>
+        <button class="game-btn" onclick="chargerJeuAvecPaiement('https://raw.githubusercontent.com/nesbox/ROMs/master/NES/Tetris%20(USA).nes')">🧩 Tetris</button>
+        <button class="game-btn" onclick="chargerJeuAvecPaiement('https://raw.githubusercontent.com/nesbox/ROMs/master/NES/Pac-Man%20(USA).nes')">🟡 Pac-Man</button>
+    </div>
+
+    <script>
+        // Initialisation du SDK Pi (bac à sable activé pour les tests)
+        try {
+            Pi.init({ version: "2.0", sandbox: true });
+        } catch(e) {
+            console.error("SDK Pi non initialisé", e);
+        }
+
+        async function authPiUser() {
+            try {
+                const user = await Pi.authenticate(['username', 'payments'], () => {});
+                document.getElementById('user-status').innerText = `Bienvenue, ${user.username} !`;
+            } catch (err) { 
+                alert("Erreur de connexion : assure-toi d'être dans le Pi Browser."); 
+            }
+        }
+
+        // Configuration de l'émulateur JSNES
+        var SCREEN_WIDTH = 256;
+        var SCREEN_HEIGHT = 240;
+        var canvas = document.getElementById("screen");
+        var ctx = canvas.getContext("2d");
+        
+        var imagedata = ctx.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
+        for (var i = 3; i < imagedata.data.length; i += 4) {
+            imagedata.data[i] = 255;
+        }
+
+        var nes = new jsnes.NES({
+            onFrame: function(buffer) {
+                var arr = new Uint32Array(buffer.buffer);
+                for (var i = 0; i < arr.length; i++) {
+                    imagedata.data[i * 4] = (arr[i] >> 16) & 0xFF;
+                    imagedata.data[i * 4 + 1] = (arr[i] >> 8) & 0xFF;
+                    imagedata.data[i * 4 + 2] = arr[i] & 0xFF;
+                }
+                ctx.putImageData(imagedata, 0, 0);
+            },
+            onAudioSample: function(left, right) {},
+            sampleRate: 44100
+        });
+
+        var romRequest = null;
+
+        function lancerJeuAvecPaiement(url) {
+            // Demande de paiement de 0.1 Pi avant de lancer la ROM
+            Pi.createPayment({
+                amount: 0.1,
+                memo: "Ticket Session Arcade Retro",
+                metadata: { game: "nes_retro" }
+            }, {
+                onReadyForServerApproval: (payment) => { },
+                onReadyForServerCompletion: (paymentId) => { 
+                    executerChargementRom(url);
+                },
+                onCancel: () => { alert("Paiement annulé, jeu non lancé."); },
+                onError: (error) => { alert("Erreur paiement : " + error); }
+            });
+        }
+
+        function executerChargementRom(url) {
+            // Affiche l'écran d'émulation et cache les boutons
+            document.querySelector('.game-grid').style.display = 'none';
+            document.getElementById('emulator-box').style.display = 'inline-block';
+
+            if(romRequest) romRequest.abort();
             
+            romRequest = new XMLHttpRequest();
+            romRequest.open('GET', url, true);
+            romRequest.responseType = 'arraybuffer';
+            
+            romRequest.onload = function() {
+                if (this.status == 200) {
+                    var romData = new Uint8Array(this.response);
+                    try {
+                        nes.loadROM(romData);
+                        nes.start();
+                    } catch(e) {
+                        alert("Erreur lors du chargement du jeu.");
+                        console.error(e);
+                    }
+                } else {
+                    alert("Impossible de récupérer le fichier du jeu.");
+                }
+            };
+            romRequest.send();
+        }
+
+        function arreterJeu() {
+            nes.stop();
+            document.getElementById('emulator-box').style.display = 'none';
+            document.querySelector('.game-grid').style.display = 'grid';
+        }
+    </script>
+</body>
+</html>
