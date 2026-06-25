@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PI ARCADE NEXUS</title>
-    <script src="https://unpkg.com/jsnes/dist/jsnes.min.js"></script>
+    
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
     <style>
         body { 
             background-color: #0d0d1f; 
@@ -14,34 +16,40 @@
             padding: 0; 
             text-align: center;
         }
-        header { padding: 20px; border-bottom: 2px solid #7c3aed; }
-        .game-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-            gap: 20px; 
-            padding: 30px; 
-            max-width: 800px; 
-            margin: auto; 
+        header { 
+            padding: 20px; 
+            border-bottom: 2px solid #7c3aed; 
+            background: #1a1a2e;
         }
-        .game-card { 
-            background: #1a1a2e; 
-            padding: 25px; 
-            border-radius: 12px; 
-            color: white; 
-            border: 1px solid #7c3aed; 
-            cursor: pointer; 
-            transition: transform 0.2s, background 0.2s;
-            font-size: 18px;
+        h1 { margin: 0; font-size: 28px; color: #fff; }
+        
+        #pi-login-btn {
+            margin-top: 15px;
+            padding: 12px 25px;
+            background-color: #5b21b6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
             font-weight: bold;
+            cursor: pointer;
         }
-        .game-card:hover { 
-            transform: scale(1.05); 
-            background: #2a2a4e; 
+        
+        .game-box {
+            margin: 30px auto;
+            max-width: 400px;
+            background: #1a1a2e;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #7c3aed;
         }
-        #emulator-container {
-            margin-top: 20px;
-            display: flex;
-            justify-content: center;
+
+        /* Intégration propre d'un mini-jeu Web natif (léger et sans blocage) */
+        iframe {
+            width: 100%;
+            height: 450px;
+            border: none;
+            border-radius: 8px;
         }
     </style>
 </head>
@@ -49,35 +57,45 @@
 
     <header>
         <h1>🎮 PI ARCADE NEXUS</h1>
-        <p style="color: #a78bfa;">Application officielle du réseau Pi</p>
+        <button id="pi-login-btn" onclick="authPiUser()">Se connecter avec Pi</button>
+        <p id="user-status" style="color: #a78bfa; margin-top: 10px;">Connecte ton compte pour jouer.</p>
     </header>
 
-    <div class="game-grid">
-        <div class="game-card" onclick="lancerJeu('https://raw.githubusercontent.com/nesbox/ROMs/master/NES/Contra.nes')">
-            Contra
-        </div>
-        <div class="game-card" onclick="lancerJeu('https://raw.githubusercontent.com/nesbox/ROMs/master/NES/Super%20Mario%20Bros.nes')">
-            Super Mario Bros
-        </div>
-        <div class="game-card" onclick="lancerJeu('https://raw.githubusercontent.com/nesbox/ROMs/master/NES/Tetris%20(USA).nes')">
-            Tetris
-        </div>
-        <div class="game-card" onclick="lancerJeu('https://raw.githubusercontent.com/nesbox/ROMs/master/NES/Pac-Man%20(USA).nes')">
-            Pac-Man
-        </div>
-    </div>
-
-    <div id="emulator-container">
-        <canvas id="screen" width="256" height="240" style="background: black; border: 2px solid #7c3aed; border-radius: 8px; display: none;"></canvas>
+    <div class="game-box">
+        <h3>Défi Quotidien</h3>
+        <iframe src="https://gabrielecirulli.github.io/2048/"></iframe>
     </div>
 
     <script>
-        function lancerJeu(urlRom) {
-            alert("Démarrage du jeu... (Les émulateurs intégrés nécessitent parfois un serveur local pour des raisons de sécurité de navigateur, teste sur Pi Browser).");
-            // Ajoute ici ton script d'émulateur (ex: EJS / jsnes) configuré pour charger urlRom
-            console.log("Chargement de la ROM : " + urlRom);
+        // Initialisation du SDK Pi
+        // (Pour les tests dans le Pi Browser, sandbox est à true, il faudra le mettre à false en production)
+        window.onload = function() {
+            try {
+                Pi.init({ version: "2.0", sandbox: true });
+            } catch(e) {
+                console.error("Erreur d'initialisation du SDK Pi", e);
+            }
+        };
+
+        // Fonction d'authentification de l'utilisateur Pi
+        async function authPiUser() {
+            try {
+                const scopes = ['username', 'payments'];
+                const user = await Pi.authenticate(scopes, onIncompletePaymentFound);
+                
+                // Si la connexion réussie, on affiche le nom d'utilisateur
+                document.getElementById('user-status').innerText = `Bienvenue, ${user.username} !`;
+                document.getElementById('pi-login-btn').style.display = 'none'; // Cache le bouton une fois connecté
+                
+            } catch (err) {
+                alert("Erreur lors de l'authentification : " + err);
+            }
+        }
+
+        function onIncompletePaymentFound(payment) {
+            // Gère les paiements en attente si l'utilisateur recharge la page en plein milieu d'une transaction Pi
+            console.log("Paiement incomplet détecté :", payment);
         }
     </script>
-
 </body>
 </html>
